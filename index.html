@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>RandPay — Fake Card Generator</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#6366f1">
+  <meta name="description" content="Generate fake credit card numbers for testing purposes offline using RandPay.">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --bg: #f3f4f6;
+      --card-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --text: #fff;
+      --shadow: 0 10px 25px rgba(0,0,0,0.15);
+      --border-radius: 16px;
+      --magstrip: #222;
+      --sigstrip: #f0f0f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: #1f2937;
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+      text-align: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card-wrapper {
+      perspective: 1000px;
+      width: 100%;
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
+    .card-container {
+      position: relative;
+      width: 100%;
+      height: 240px;
+      transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform-style: preserve-3d;
+    }
+
+    .card-container.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 1.25rem;
+      color: var(--text);
+      background: var(--card-bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: 1px;
+      align-self: flex-end;
+    }
+
+    .card-number {
+      font-size: 1.35rem;
+      letter-spacing: 2px;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      margin: 0.75rem 0;
+    }
+
+    .card-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.95rem;
+    }
+
+    .card-details div {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .label {
+      font-size: 0.65rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .magstrip {
+      height: 45px;
+      background: var(--magstrip);
+      margin-bottom: 1rem;
+    }
+
+    .signature-area {
+      display: flex;
+      align-items: center;
+      background: var(--sigstrip);
+      padding: 0.5rem;
+      border-radius: 6px;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: #333;
+    }
+
+    .cvv-box {
+      background: white;
+      color: #000;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    button {
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--primary);
+      color: white;
+      touch-action: manipulation;
+    }
+
+    button:hover, button:focus {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.full {
+      grid-column: span 2;
+    }
+
+    .copy-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .copy-item {
+      display: flex;
+      align-items: center;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .copy-item span {
+      padding: 0.5rem 0.75rem;
+      flex: 1;
+      font-family: monospace;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .copy-item button {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      background: #f3f4f6;
+      color: #374151;
+      border-left: 1px solid #e5e7eb;
+    }
+
+    .copy-item button.copied {
+      background: #10b981;
+      color: white;
+    }
+
+    .history {
+      background: white;
+      border-radius: 8px;
+      padding: 0.75rem;
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+    }
+
+    .history-item {
+      padding: 0.5rem;
+      border-bottom: 1px solid #f3f4f6;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+
+    .history-item:hover {
+      background: #f9fafb;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .disclaimer {
+      font-size: 0.8rem;
+      color: #6b7280;
+      text-align: center;
+      line-height: 1.4;
+      background: #fef3c7;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid #fde68a;
+    }
+
+    footer {
+      margin-top: auto;
+      padding-top: 1rem;
+      font-size: 0.75rem;
+      color: #9ca3af;
+      text-align: center;
+      width: 100%;
+    }
+
+    @media (min-width: 480px) {
+      .card-container {
+        height: 260px;
+      }
+      .card-number {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>RandPay — Fake Card Generator</h1>
+
+    <div class="card-wrapper">
+      <div class="card-container" id="cardContainer">
+        <!-- Card Front -->
+        <div class="card-face front">
+          <div class="brand">RandPay</div>
+          <div class="card-number" id="cardNumber">#### #### #### ####</div>
+          <div class="card-details">
+            <div>
+              <div class="label">Cardholder</div>
+              <div id="cardName">JOHN DOE</div>
+            </div>
+            <div>
+              <div class="label">Expires</div>
+              <div id="cardExpiry">MM/YY</div>
+            </div>
+            <div>
+              <div class="label">CVV</div>
+              <div id="cardCVV">123</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card Back -->
+        <div class="card-face card-back">
+          <div class="magstrip"></div>
+          <div style="font-size:0.8rem;opacity:0.9;margin-bottom:0.5rem;">
+            <div id="backNumber">#### #### #### ####</div>
+            <div id="backName">JOHN DOE</div>
+          </div>
+          <div class="signature-area">
+            <span>For Testing Only</span>
+            <div class="cvv-box" id="backCVV">123</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="generateBtn">Generate New</button>
+      <button id="flipBtn">Flip Card</button>
+      <button id="downloadBtn" class="full">Download PDF</button>
+    </div>
+
+    <div class="copy-group">
+      <div class="copy-item">
+        <span id="copyName">JOHN DOE</span>
+        <button data-copy="name">Copy</button>
+      </div>
+      <div class="copy-item">
+        <span id="copyNumber">#### #### #### ####</span>
+        <button data-copy="number">Copy</button>
+      </div>
+      <div class="copy-item">
+        <span id="copyExpiry">MM/YY</span>
+        <button data-copy="expiry">Copy</button>
+      </div>
+      <div class="copy-item">
+        <span id="copyCVV">123</span>
+        <button data-copy="cvv">Copy</button>
+      </div>
+    </div>
+
+    <div class="history" id="historyList">
+      <div style="text-align:center;color:#9ca3af;font-size:0.85rem;padding:0.5rem;">
+        No history yet
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      <strong>Policy / Disclaimer:</strong> This generator creates fake, invalid card data for internal testing only. Do not use for real payments. RandPay is not a payment processor.
+    </div>
+  </div>
+
+  <footer>
+    © RandPay — All demo data are fake and for internal testing only.
+  </footer>
+
+  <!-- CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+
+    // === Data & State ===
+    const firstNames = [
+      "Aarav", "Aditya", "Ahmed", "Aisha", "Alex", "Alice", "Amir", "Anika", "Arjun", "Beth",
+      "Carlos", "Chen", "Daniel", "David", "Elena", "Emma", "Faisal", "Fatima", "Gabriel", "Hana",
+      "Ibrahim", "Isabella", "Jack", "Jasmine", "Javier", "Jin", "Julia", "Kamal", "Kiran", "Liam",
+      "Lila", "Lucas", "Maria", "Mateo", "Mei", "Mia", "Mohammed", "Nadia", "Noah", "Omar",
+      "Priya", "Rahul", "Rania", "Ravi", "Ryan", "Sana", "Sara", "Sofia", "Tariq", "Vikram",
+      "Wei", "Yara", "Youssef", "Zara", "Zhang"
+    ];
+
+    const lastNames = [
+      "Ahmed", "Ali", "Anderson", "Brown", "Chen", "Davis", "Garcia", "Harris", "Iqbal", "Jones",
+      "Khan", "Kim", "Lee", "Lewis", "Lopez", "Martinez", "Miller", "Nguyen", "Patel", "Rahman",
+      "Rodriguez", "Santos", "Sharma", "Singh", "Smith", "Taylor", "Thomas", "Walker", "Wang", "Williams",
+      "Wilson", "Yang", "Zhang"
+    ];
+
+    let currentCard = null;
+    let history = JSON.parse(localStorage.getItem('randpay_history') || '[]');
+    const historyLimit = 10;
+
+    // === DOM Elements ===
+    const els = {
+      container: document.getElementById('cardContainer'),
+      number: document.getElementById('cardNumber'),
+      name: document.getElementById('cardName'),
+      expiry: document.getElementById('cardExpiry'),
+      cvv: document.getElementById('cardCVV'),
+      backNumber: document.getElementById('backNumber'),
+      backName: document.getElementById('backName'),
+      backCVV: document.getElementById('backCVV'),
+      copyName: document.getElementById('copyName'),
+      copyNumber: document.getElementById('copyNumber'),
+      copyExpiry: document.getElementById('copyExpiry'),
+      copyCVV: document.getElementById('copyCVV'),
+      historyList: document.getElementById('historyList')
+    };
+
+    // Generate 15 random digits, then set check digit to ensure Luhn FAILS
+    function generateInvalidCardNumber() {
+      let digits = [];
+      for (let i = 0; i < 15; i++) {
+        digits.push(Math.floor(Math.random() * 10));
+      }
+      const tempNum = digits.join('') + '0';
+      const reversed = String(tempNum).split('').reverse().map(Number);
+      let sum = 0;
+      for (let i = 0; i < reversed.length; i++) {
+        let d = reversed[i];
+        if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
+        sum += d;
+      }
+      const validCheck = (10 - (sum % 10)) % 10;
+      let invalidCheck = (validCheck + 1) % 10;
+      if (invalidCheck === validCheck) invalidCheck = (invalidCheck + 1) % 10;
+      digits.push(invalidCheck);
+      const num = digits.join('');
+      return num.replace(/(\d{4})(?=\d)/g, '$1 ');
+    }
+
+    function randomName() {
+      const first = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const last = lastNames[Math.floor(Math.random() * lastNames.length)];
+      return `${first.toUpperCase()} ${last.toUpperCase()}`;
+    }
+
+    function randomExpiry() {
+      const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+      const year = String(new Date().getFullYear() % 100 + Math.floor(Math.random() * 6));
+      return `${month}/${year}`;
+    }
+
+    function randomCVV() {
+      return String(Math.floor(Math.random() * 900) + 100);
+    }
+
+    function generateCard() {
+      const card = {
+        number: generateInvalidCardNumber(),
+        name: randomName(),
+        expiry: randomExpiry(),
+        cvv: randomCVV(),
+        timestamp: Date.now()
+      };
+
+      currentCard = card;
+      renderCard(card);
+      saveToHistory(card);
+      updateCopyFields(card);
+      return card;
+    }
+
+    function renderCard(card) {
+      els.number.textContent = card.number;
+      els.name.textContent = card.name;
+      els.expiry.textContent = card.expiry;
+      els.cvv.textContent = card.cvv;
+      els.backNumber.textContent = card.number;
+      els.backName.textContent = card.name;
+      els.backCVV.textContent = card.cvv;
+    }
+
+    function updateCopyFields(card) {
+      els.copyName.textContent = card.name;
+      els.copyNumber.textContent = card.number;
+      els.copyExpiry.textContent = card.expiry;
+      els.copyCVV.textContent = card.cvv;
+    }
+
+    function saveToHistory(card) {
+      history.unshift({ ...card, id: Date.now() });
+      if (history.length > historyLimit) history.pop();
+      localStorage.setItem('randpay_history', JSON.stringify(history));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      if (history.length === 0) {
+        els.historyList.innerHTML = '<div style="text-align:center;color:#9ca3af;font-size:0.85rem;padding:0.5rem;">No history yet</div>';
+        return;
+      }
+
+      els.historyList.innerHTML = history.map(item => `
+        <div class="history-item" data-id="${item.id}">
+          <strong>${item.name}</strong> • ${item.number} • ${item.expiry}
+        </div>
+      `).join('');
+
+      els.historyList.querySelectorAll('.history-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const id = parseInt(el.dataset.id);
+          const card = history.find(h => h.id === id);
+          if (card) {
+            currentCard = card;
+            renderCard(card);
+            updateCopyFields(card);
+            els.container.classList.remove('flipped');
+          }
+        });
+      });
+    }
+
+    document.querySelectorAll('[data-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const field = btn.dataset.copy;
+        const text = {
+          name: currentCard?.name,
+          number: currentCard?.number,
+          expiry: currentCard?.expiry,
+          cvv: currentCard?.cvv
+        }[field];
+
+        if (!text) return;
+
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btn.textContent;
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = original;
+            btn.classList.remove('copied');
+          }, 1500);
+        }).catch(() => {
+          alert('Copy failed');
+        });
+      });
+    });
+
+    document.getElementById('flipBtn').addEventListener('click', () => {
+      els.container.classList.toggle('flipped');
+    });
+
+    document.getElementById('generateBtn').addEventListener('click', () => {
+      generateCard();
+      els.container.classList.remove('flipped');
+    });
+
+    document.getElementById('downloadBtn').addEventListener('click', async () => {
+      if (!currentCard) {
+        alert('Generate a card first');
+        return;
+      }
+      
+      // Check offline status for CDNs
+      if (typeof window.jspdf === 'undefined') {
+         alert('PDF libraries not loaded. You might be offline and the cache is not ready.');
+         return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [450, 700]
+      });
+
+      const front = document.querySelector('.card-face.front');
+      const back = document.querySelector('.card-face.card-back');
+
+      try {
+        const canvas1 = await html2canvas(front, { scale: 2, backgroundColor: null });
+        const img1 = canvas1.toDataURL('image/png');
+        pdf.addImage(img1, 'PNG', 35, 40, 380, 240);
+
+        const canvas2 = await html2canvas(back, { scale: 2, backgroundColor: null });
+        const img2 = canvas2.toDataURL('image/png');
+        pdf.addImage(img2, 'PNG', 35, 320, 380, 240);
+
+        pdf.setFontSize(10);
+        pdf.text('FAKE CARD — FOR INTERNAL TESTING ONLY', 35, 590);
+        pdf.text('Not valid for real transactions. Luhn-invalid.', 35, 605);
+
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+        pdf.save(`randpay-card-${timestamp}.pdf`);
+      } catch (err) {
+        console.error(err);
+        alert('PDF generation failed');
+      }
+    });
+
+    window.addEventListener('load', () => {
+      renderHistory();
+      if (history.length > 0) {
+        const latest = history[0];
+        currentCard = latest;
+        renderCard(latest);
+        updateCopyFields(latest);
+      } else {
+        generateCard();
+      }
+    });
+  </script>
+</body>
+</html>
